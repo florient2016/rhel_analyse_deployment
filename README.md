@@ -9,7 +9,7 @@ This repo consumes the [`rhel_analyse`](https://github.com/florient2016/rhel_ana
 rhel_analyse_deployment/
 ├── ansible.cfg                  # Ansible configuration
 ├── requirements.yml             # Role dependencies (git-based)
-├── site.yml                     # Main playbook
+├── main.yml                     # Main playbook
 ├── inventory/
 │   └── hosts.ini                # Inventory (adapt to your env)
 └── group_vars/
@@ -46,16 +46,16 @@ localhost
 
 ```bash
 # Analyse all servers
-ansible-playbook site.yml
+ansible-playbook main.yml
 
 # Limit to a specific host or group
-ansible-playbook site.yml --limit server1.example.com
+ansible-playbook main.yml --limit server1.example.com
 
 # Override the output directory
-ansible-playbook site.yml -e "rhel_analyse_output_dir=/var/tmp/reports"
+ansible-playbook main.yml -e "rhel_analyse_output_dir=/var/tmp/reports"
 
 # Don't fetch report to control node
-ansible-playbook site.yml -e "rhel_analyse_fetch_report=false"
+ansible-playbook main.yml -e "rhel_analyse_fetch_report=false"
 ```
 
 ### 5. View the report
@@ -108,7 +108,7 @@ open reports/server1.example.com_output.html
 │  rhel_analyse_deployment (This Repo)     │
 │                                          │
 │  requirements.yml  →  installs role      │
-│  site.yml          →  calls role         │
+│  main.yml          →  calls role         │
 │  inventory/        →  your hosts         │
 │  group_vars/       →  role variables     │
 └──────────────────────────────────────────┘
