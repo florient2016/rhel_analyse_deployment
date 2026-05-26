@@ -9,7 +9,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 - name: Analyse RHEL 9/10 hosts and generate HTML report
-  hosts: rhel_servers
+  hosts: all
   gather_facts: true
   become: true
 
