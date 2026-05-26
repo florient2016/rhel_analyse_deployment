@@ -1,0 +1,185 @@
+---
+# =============================================================================
+# Playbook : Install httpd on RHEL and deploy Autoflow landing page
+# Target   : RHEL 9 / RHEL 10 (RedHat family)
+# Usage    : ansible-playbook site.yml -i inventory/hosts.ini
+# =============================================================================
+
+- name: Deploy httpd with Autoflow landing page
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    httpd_package: httpd
+    httpd_service: httpd
+    httpd_webroot: /var/www/html
+    httpd_index: index.html
+    firewall_port: "80/tcp"
+    firewall_zone: public
+
+  pre_tasks:
+    - name: Assert RHEL family
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "RedHat"
+          - ansible_distribution_major_version in ["9", "10"]
+        fail_msg: >
+          This playbook supports RHEL/Rocky/AlmaLinux 9 or 10 only.
+          Found: {{ ansible_distribution }} {{ ansible_distribution_major_version }}
+
+  # ── Step 1 : Clean uninstall if httpd already exists ──────────────────────
+  tasks:
+    - name: Check if httpd is installed
+      ansible.builtin.shell: rpm -q httpd
+      register: _httpd_installed
+      changed_when: false
+      failed_when: false
+
+    - name: Stop httpd service if running
+      ansible.builtin.systemd:
+        name: "{{ httpd_service }}"
+        state: stopped
+      when: _httpd_installed.rc == 0
+      failed_when: false
+
+    - name: Disable httpd service if enabled
+      ansible.builtin.systemd:
+        name: "{{ httpd_service }}"
+        enabled: false
+      when: _httpd_installed.rc == 0
+      failed_when: false
+
+    - name: Uninstall httpd and related packages
+      ansible.builtin.dnf:
+        name:
+          - httpd
+          - httpd-tools
+          - httpd-filesystem
+          - mod_ssl
+        state: absent
+        autoremove: true
+      when: _httpd_installed.rc == 0
+      register: _httpd_removed
+
+    - name: Remove leftover webroot content
+      ansible.builtin.file:
+        path: "{{ httpd_webroot }}"
+        state: absent
+      when: _httpd_installed.rc == 0
+
+    - name: Confirm httpd was removed
+      ansible.builtin.debug:
+        msg: "httpd was {{ 'removed' if _httpd_installed.rc == 0 else 'not installed — skipping uninstall' }}"
+
+  # ── Step 2 : Install httpd ─────────────────────────────────────────────────
+    - name: Install httpd
+      ansible.builtin.dnf:
+        name: "{{ httpd_package }}"
+        state: present
+        update_cache: true
+
+    - name: Ensure webroot directory exists
+      ansible.builtin.file:
+        path: "{{ httpd_webroot }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+  # ── Step 3 : Deploy landing page ──────────────────────────────────────────
+    - name: Deploy Autoflow landing page
+      ansible.builtin.template:
+        src: templates/index.html.j2
+        dest: "{{ httpd_webroot }}/{{ httpd_index }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart httpd
+
+    - name: Remove default httpd welcome page
+      ansible.builtin.file:
+        path: /etc/httpd/conf.d/welcome.conf
+        state: absent
+      notify: Restart httpd
+
+  # ── Step 4 : Enable & start httpd ─────────────────────────────────────────
+    - name: Enable and start httpd service
+      ansible.builtin.systemd:
+        name: "{{ httpd_service }}"
+        state: started
+        enabled: true
+        daemon_reload: true
+
+  # ── Step 5 : Firewall ─────────────────────────────────────────────────────
+    - name: Check if firewalld is running
+      ansible.builtin.systemd:
+        name: firewalld
+      register: _firewalld_status
+      failed_when: false
+
+    - name: Open port 80 in firewalld
+      ansible.posix.firewalld:
+        port: "{{ firewall_port }}"
+        zone: "{{ firewall_zone }}"
+        permanent: true
+        immediate: true
+        state: enabled
+      when: _firewalld_status.status.ActiveState | default('inactive') == 'active'
+      notify: Reload firewalld
+
+    - name: Open http service in firewalld (redundant safety)
+      ansible.posix.firewalld:
+        service: http
+        zone: "{{ firewall_zone }}"
+        permanent: true
+        immediate: true
+        state: enabled
+      when: _firewalld_status.status.ActiveState | default('inactive') == 'active'
+
+    - name: Warn if firewalld is not running
+      ansible.builtin.debug:
+        msg: "WARNING: firewalld is not running — port 80 was NOT opened via firewalld. Check your firewall manually."
+      when: _firewalld_status.status.ActiveState | default('inactive') != 'active'
+
+  # ── Step 6 : SELinux ──────────────────────────────────────────────────────
+    - name: Allow httpd network connections (SELinux)
+      ansible.posix.seboolean:
+        name: httpd_can_network_connect
+        state: true
+        persistent: true
+      when: ansible_selinux.status | default('disabled') == 'enabled'
+      failed_when: false
+
+  # ── Final check ───────────────────────────────────────────────────────────
+    - name: Verify httpd is responding on port 80
+      ansible.builtin.uri:
+        url: "http://{{ ansible_default_ipv4.address | default('localhost') }}"
+        method: GET
+        status_code: 200
+        timeout: 10
+      register: _http_check
+      retries: 3
+      delay: 3
+      until: _http_check.status == 200
+      failed_when: false
+
+    - name: Deployment summary
+      ansible.builtin.debug:
+        msg: >-
+          Deployment complete |
+          Host: {{ inventory_hostname }} |
+          URL: http://{{ ansible_default_ipv4.address | default(inventory_hostname) }} |
+          HTTP status: {{ _http_check.status | default('unknown') }} |
+          Page: {{ httpd_webroot }}/{{ httpd_index }}
+
+  handlers:
+    - name: Restart httpd
+      ansible.builtin.systemd:
+        name: "{{ httpd_service }}"
+        state: restarted
+
+    - name: Reload firewalld
+      ansible.builtin.systemd:
+        name: firewalld
+        state: reloaded
