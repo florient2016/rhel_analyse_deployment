@@ -5,7 +5,7 @@
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── Report output ──
-rhel_analyse_output_dir: "/tmp/rhel_analyse"
+rhel_analyse_output_dir: "/var/www/html"  
 rhel_analyse_output_file: "output.html"
 rhel_analyse_fetch_report: false
 rhel_analyse_local_report_dir: "./reports"
