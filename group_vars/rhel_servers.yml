@@ -1,13 +1,13 @@
 ---
 # ──────────────────────────────────────────────────────────────────────────────
-# Group variables applied to all hosts in [rhel_servers]
+# Group variables applied to all hosts 
 # Override per host in host_vars/<hostname>.yml
 # ──────────────────────────────────────────────────────────────────────────────
 
 # ── Report output ──
 rhel_analyse_output_dir: "/tmp/rhel_analyse"
 rhel_analyse_output_file: "output.html"
-rhel_analyse_fetch_report: true
+rhel_analyse_fetch_report: false
 rhel_analyse_local_report_dir: "./reports"
 
 # ── Thresholds ──

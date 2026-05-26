@@ -27,7 +27,6 @@
         path: "{{ rhel_analyse_local_report_dir | default('./reports') }}"
         state: directory
         mode: "0755"
-      delegate_to: localhost
       run_once: true
       become: false
 
@@ -43,7 +42,7 @@
           ════════════════════════════════════════════
            Host    : {{ inventory_hostname }}
            Remote  : {{ rhel_analyse_output_dir }}/{{ rhel_analyse_output_file }}
-          {% if rhel_analyse_fetch_report | default(true) %}
+           Fetched: {{ rhel_analyse_fetch_report | default(true) | bool }}
            Local   : {{ rhel_analyse_local_report_dir | default('./reports') }}/{{ inventory_hostname }}_{{ rhel_analyse_output_file }}
-          {% endif %}
+          
           ════════════════════════════════════════════
