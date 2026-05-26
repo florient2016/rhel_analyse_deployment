@@ -1,0 +1,49 @@
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# RHEL Analysis Deployment Playbook
+#
+# Usage:
+#   ansible-playbook site.yml -i inventory/hosts.ini
+#   ansible-playbook site.yml -i inventory/hosts.ini --limit prod_rhel
+#   ansible-playbook site.yml -i inventory/hosts.ini -e "rhel_analyse_fetch_report=false"
+# ──────────────────────────────────────────────────────────────────────────────
+
+- name: Analyse RHEL 9/10 hosts and generate HTML report
+  hosts: rhel_servers
+  gather_facts: true
+  become: true
+
+  pre_tasks:
+    - name: Verify target OS family
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == 'RedHat'
+        fail_msg: >
+          This playbook targets RedHat-family systems only.
+          Found: {{ ansible_distribution }} ({{ ansible_os_family }})
+
+    - name: Create local reports directory on control node
+      ansible.builtin.file:
+        path: "{{ rhel_analyse_local_report_dir | default('./reports') }}"
+        state: directory
+        mode: "0755"
+      delegate_to: localhost
+      run_once: true
+      become: false
+
+  roles:
+    - role: rhel_analyse
+
+  post_tasks:
+    - name: Print report locations summary
+      ansible.builtin.debug:
+        msg: |
+          ════════════════════════════════════════════
+           RHEL Analysis Complete
+          ════════════════════════════════════════════
+           Host    : {{ inventory_hostname }}
+           Remote  : {{ rhel_analyse_output_dir }}/{{ rhel_analyse_output_file }}
+          {% if rhel_analyse_fetch_report | default(true) %}
+           Local   : {{ rhel_analyse_local_report_dir | default('./reports') }}/{{ inventory_hostname }}_{{ rhel_analyse_output_file }}
+          {% endif %}
+          ════════════════════════════════════════════

@@ -1,0 +1,37 @@
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# Group variables applied to all hosts in [rhel_servers]
+# Override per host in host_vars/<hostname>.yml
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ── Report output ──
+rhel_analyse_output_dir: "/tmp/rhel_analyse"
+rhel_analyse_output_file: "output.html"
+rhel_analyse_fetch_report: true
+rhel_analyse_local_report_dir: "./reports"
+
+# ── Thresholds ──
+rhel_analyse_disk_warn_percent: 80
+rhel_analyse_mem_warn_percent: 80
+
+# ── Report depth ──
+rhel_analyse_top_packages: 30
+rhel_analyse_top_services: 50
+
+# ── Toggle sections ──
+rhel_analyse_sections:
+  os_info:   true
+  hardware:  true
+  cpu:       true
+  memory:    true
+  disk:      true
+  network:   true
+  services:  true
+  packages:  true
+  security:  true
+  firewall:  true
+  selinux:   true
+  users:     true
+  cron:      true
+  kernel:    true
+  logs:      true

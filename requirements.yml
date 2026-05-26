@@ -1,0 +1,18 @@
+---
+# ──────────────────────────────────────────────────────────────────────────────
+# Ansible Galaxy / Git requirements
+# Install with:  ansible-galaxy install -r requirements.yml
+# ──────────────────────────────────────────────────────────────────────────────
+
+roles:
+  - name: rhel_analyse
+    src: https://github.com/florient2016/rhel_analyse_role.git
+    scm: git
+    version: main       
+
+# If you also use collections, declare them here:
+# collections:
+#   - name: ansible.posix
+#     version: ">=1.5.0"
+#   - name: community.general
+#     version: ">=8.0.0"
