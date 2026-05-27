@@ -62,15 +62,6 @@
       when: _httpd_installed.rc == 0
       register: _httpd_removed
 
-    - name: Remove leftover webroot content
-      ansible.builtin.file:
-        path: "{{ httpd_webroot }}"
-        state: absent
-      when: _httpd_installed.rc == 0
-
-    - name: Confirm httpd was removed
-      ansible.builtin.debug:
-        msg: "httpd was {{ 'removed' if _httpd_installed.rc == 0 else 'not installed — skipping uninstall' }}"
 
   # ── Step 2 : Install httpd ─────────────────────────────────────────────────
     - name: Install httpd
@@ -95,12 +86,6 @@
         owner: root
         group: root
         mode: "0644"
-      notify: Restart httpd
-
-    - name: Remove default httpd welcome page
-      ansible.builtin.file:
-        path: /etc/httpd/conf.d/welcome.conf
-        state: absent
       notify: Restart httpd
 
   # ── Step 4 : Enable & start httpd ─────────────────────────────────────────
